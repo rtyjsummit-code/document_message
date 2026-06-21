@@ -240,8 +240,8 @@ function renderDocument() {
       1)각인 2)뿌리 3)체질
     */
     if (
-      /\d+\)/.test(line)
-    ) {
+  isSubtopic(line)
+)
 
       const subs =
         splitSubtopics(line);
