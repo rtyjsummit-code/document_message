@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Message Organizer V4</title>
+
+  <link rel="stylesheet" href="style.css" />
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+
+    <h2>Message Organizer V4</h2>
+
+    <textarea
+      id="inputText"
+      placeholder="메시지 개요를 붙여넣으세요."
+    ></textarea>
+
+    <div class="button-group">
+      <button onclick="renderDocument()">
+        미리보기
+      </button>
+
+      <button onclick="downloadPDF()">
+        PDF 저장
+      </button>
+    </div>
+
+  </aside>
+
+  <main class="preview-area">
+
+    <div id="paper" class="paper">
+
+    </div>
+
+  </main>
+
+</div>
+
+<script src="parser.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
