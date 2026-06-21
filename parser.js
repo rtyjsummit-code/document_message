@@ -1,134 +1,76 @@
-function parseMessage(text) {
-  const lines = text
-    .split("\n")
-    .map(line => line.trim())
-    .filter(line => line !== "");
+function fixText(text) {
+  return text
+    .replace(/\r/g, "")
+    .replace(/–/g, "-")
+    .replace(/\t/g, " ");
+}
 
-  let note = "";
-  let title = "";
+function isSection(line) {
+  return (
+    line.startsWith("본문") ||
+    line.startsWith("서론") ||
+    line.startsWith("본론") ||
+    line.startsWith("결론")
+  );
+}
 
-  let preIntro = [];
-  let intro = [];
-  let body = [];
-  let conclusion = [];
+function isTopic(line) {
+  return /^\d+\./.test(line);
+}
 
-  let currentSection = "pre";
+/*
+ 소주제
+ 1) 확실한 복음
+*/
+function isSubtopic(line) {
+  return /^\d+\)/.test(line);
+}
 
-  for (let line of lines) {
+/*
+ (1)(2)(3)
+*/
+function isDetailLine(line) {
+  return /^\(\d+\)/.test(line);
+}
 
-    // [2026-06-21 전체메세지 개요]
-    if (line.startsWith("[") && line.endsWith("]")) {
-      note = line;
-      continue;
-    }
+/*
+ (1)그리스도 (2)5가지 확신
+ →
+ (1) 그리스도     (2) 5가지 확신
+*/
+function normalizeDetailLine(line) {
 
-    // 제목
-    if (
-      !title &&
-      !line.startsWith("서론") &&
-      !line.startsWith("본론") &&
-      !line.startsWith("결론")
-    ) {
-      title = line;
-      continue;
-    }
+  const parts =
+    line.match(/\(\d+\)[^\(]*/g);
 
-    // 서론
-    if (line.startsWith("서론")) {
-      currentSection = "intro";
+  if (!parts) return line;
 
-      const rest = line.replace(/^서론\s*[-–]?\s*/, "");
+  return parts
+    .map(item => {
 
-      if (rest) {
-        intro.push({
-          type: "text",
-          text: rest
-        });
-      }
+      const num =
+        item.match(/\(\d+\)/)[0];
 
-      continue;
-    }
+      const text =
+        item.replace(num, "").trim();
 
-    // 본론
-    if (line.startsWith("본론")) {
-      currentSection = "body";
-      continue;
-    }
+      return `${num} ${text}`;
 
-    // 결론
-    if (line.startsWith("결론")) {
-      currentSection = "conclusion";
+    })
+    .join("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+}
 
-      const rest = line.replace(/^결론\s*[-–]?\s*/, "");
+/*
+ 1)확실한 복음
+ 2)분명한 미션
+*/
+function splitSubtopics(line) {
 
-      if (rest) {
-        conclusion.push({
-          type: "text",
-          text: rest
-        });
-      }
+  const matches =
+    line.match(/\d+\)[^0-9]+/g);
 
-      continue;
-    }
+  if (!matches)
+    return [line];
 
-    const target =
-      currentSection === "intro"
-        ? intro
-        : currentSection === "body"
-        ? body
-        : currentSection === "conclusion"
-        ? conclusion
-        : preIntro;
-
-    // 대주제
-    if (/^\d+\./.test(line)) {
-      target.push({
-        type: "major",
-        text: line
-      });
-      continue;
-    }
-
-    // 소주제
-    if (/^\d+\)/.test(line)) {
-      target.push({
-        type: "minor",
-        text: line
-      });
-      continue;
-    }
-
-    // (1)(2)(3) 여러개 있는 줄
-    const matches = line.match(/\(\d+\)/g);
-
-    if (matches && matches.length >= 2) {
-
-      const items = line
-        .split(/(?=\(\d+\))/)
-        .map(v => v.trim())
-        .filter(Boolean);
-
-      target.push({
-        type: "subminor",
-        items
-      });
-
-      continue;
-    }
-
-    // 일반본문
-    target.push({
-      type: "text",
-      text: line
-    });
-  }
-
-  return {
-    note,
-    title,
-    preIntro,
-    intro,
-    body,
-    conclusion
-  };
+  return matches.map(v => v.trim());
 }
