@@ -6,15 +6,16 @@ function parseMessage(text) {
 
   let note = "";
   let title = "";
-  let preIntro = [];
 
+  let preIntro = [];
   let intro = [];
   let body = [];
   let conclusion = [];
 
-  let current = "pre";
+  let currentSection = "pre";
 
-  for (const line of lines) {
+  for (let line of lines) {
+
     // [2026-06-21 전체메세지 개요]
     if (line.startsWith("[") && line.endsWith("]")) {
       note = line;
@@ -22,51 +23,60 @@ function parseMessage(text) {
     }
 
     // 제목
-    if (!title && !line.startsWith("서론") &&
-        !line.startsWith("본론") &&
-        !line.startsWith("결론")) {
+    if (
+      !title &&
+      !line.startsWith("서론") &&
+      !line.startsWith("본론") &&
+      !line.startsWith("결론")
+    ) {
       title = line;
       continue;
     }
 
-    // 섹션 전환
+    // 서론
     if (line.startsWith("서론")) {
-      current = "intro";
+      currentSection = "intro";
 
       const rest = line.replace(/^서론\s*[-–]?\s*/, "");
 
-      if (rest) intro.push({
-        type: "text",
-        text: rest
-      });
+      if (rest) {
+        intro.push({
+          type: "text",
+          text: rest
+        });
+      }
 
       continue;
     }
 
+    // 본론
     if (line.startsWith("본론")) {
-      current = "body";
+      currentSection = "body";
       continue;
     }
 
+    // 결론
     if (line.startsWith("결론")) {
-      current = "conclusion";
+      currentSection = "conclusion";
 
       const rest = line.replace(/^결론\s*[-–]?\s*/, "");
 
-      if (rest) conclusion.push({
-        type: "text",
-        text: rest
-      });
+      if (rest) {
+        conclusion.push({
+          type: "text",
+          text: rest
+        });
+      }
 
       continue;
     }
 
     const target =
-      current === "intro"
+      currentSection === "intro"
         ? intro
-        : current === "body"
+        : currentSection === "body"
         ? body
-        : current === "conclusion"
+        : currentSection === "conclusion"
         ? conclusion
         : preIntro;
 
@@ -88,19 +98,15 @@ function parseMessage(text) {
       continue;
     }
 
-    // 세부소주제
-    // (1)그리스도 (2)5가지확신
+    // (1)(2)(3) 여러개 있는 줄
     const matches = line.match(/\(\d+\)/g);
 
     if (matches && matches.length >= 2) {
-      const items = [];
 
-      const parts = line.split(/(?=\(\d+\))/);
-
-      parts.forEach(part => {
-        const cleaned = part.trim();
-        if (cleaned) items.push(cleaned);
-      });
+      const items = line
+        .split(/(?=\(\d+\))/)
+        .map(v => v.trim())
+        .filter(Boolean);
 
       target.push({
         type: "subminor",
@@ -110,7 +116,7 @@ function parseMessage(text) {
       continue;
     }
 
-    // 일반 텍스트
+    // 일반본문
     target.push({
       type: "text",
       text: line
