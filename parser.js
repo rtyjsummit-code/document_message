@@ -1,94 +1,128 @@
-function fixText(text) {
+function parseMessage(text) {
+  const lines = text
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => line !== "");
 
-  return text
-    .replaceAll("론론", "본론")
-    .replaceAll("본 론", "본론")
-    .replaceAll("결 른", "결론")
-    .replaceAll("1..", "1.");
-}
+  let note = "";
+  let title = "";
+  let preIntro = [];
 
-/*
-  (1)그리스도  (2)5가지 확신
-  형태 정리
-*/
-function normalizeDetailLine(line) {
+  let intro = [];
+  let body = [];
+  let conclusion = [];
 
-  return line
-    .replace(/\(\d+\)/g, match => {
-      return " " + match + " ";
-    })
-    .replace(/\s+/g, " ")
-    .trim();
-}
+  let current = "pre";
 
-/*
-  1)각인 2)뿌리 3)체질
+  for (const line of lines) {
+    // [2026-06-21 전체메세지 개요]
+    if (line.startsWith("[") && line.endsWith("]")) {
+      note = line;
+      continue;
+    }
 
-  →
+    // 제목
+    if (!title && !line.startsWith("서론") &&
+        !line.startsWith("본론") &&
+        !line.startsWith("결론")) {
+      title = line;
+      continue;
+    }
 
-  [
-    "1)각인",
-    "2)뿌리",
-    "3)체질"
-  ]
-*/
-function splitSubtopics(line) {
+    // 섹션 전환
+    if (line.startsWith("서론")) {
+      current = "intro";
 
-  const result = line
-    .split(/(?=\d+\))/)
-    .map(v => v.trim())
-    .filter(v => v.length > 0);
+      const rest = line.replace(/^서론\s*[-–]?\s*/, "");
 
-  return result;
-}
+      if (rest) intro.push({
+        type: "text",
+        text: rest
+      });
 
-/*
-  섹션 여부
-*/
-function isSection(line) {
+      continue;
+    }
 
-  return [
-    "본문",
-    "서론",
-    "본론",
-    "결론"
-  ].includes(line.trim());
-}
+    if (line.startsWith("본론")) {
+      current = "body";
+      continue;
+    }
 
-/*
-  대주제 여부
+    if (line.startsWith("결론")) {
+      current = "conclusion";
 
-  1.
-  2.
-  3.
-*/
-function isTopic(line) {
+      const rest = line.replace(/^결론\s*[-–]?\s*/, "");
 
-  return /^\d+\./.test(
-    line.trim()
-  );
-}
+      if (rest) conclusion.push({
+        type: "text",
+        text: rest
+      });
 
-/*
-  소주제 여부
+      continue;
+    }
 
-  1)
-  2)
-*/
-function isSubtopic(line) {
+    const target =
+      current === "intro"
+        ? intro
+        : current === "body"
+        ? body
+        : current === "conclusion"
+        ? conclusion
+        : preIntro;
 
-  return /^\d+\)/.test(
-    line.trim()
-  );
-}
+    // 대주제
+    if (/^\d+\./.test(line)) {
+      target.push({
+        type: "major",
+        text: line
+      });
+      continue;
+    }
 
-/*
-  (1)
-  (2)
-*/
-function isDetailLine(line) {
+    // 소주제
+    if (/^\d+\)/.test(line)) {
+      target.push({
+        type: "minor",
+        text: line
+      });
+      continue;
+    }
 
-  return /^\(\d+\)/.test(
-    line.trim()
-  );
+    // 세부소주제
+    // (1)그리스도 (2)5가지확신
+    const matches = line.match(/\(\d+\)/g);
+
+    if (matches && matches.length >= 2) {
+      const items = [];
+
+      const parts = line.split(/(?=\(\d+\))/);
+
+      parts.forEach(part => {
+        const cleaned = part.trim();
+        if (cleaned) items.push(cleaned);
+      });
+
+      target.push({
+        type: "subminor",
+        items
+      });
+
+      continue;
+    }
+
+    // 일반 텍스트
+    target.push({
+      type: "text",
+      text: line
+    });
+  }
+
+  return {
+    note,
+    title,
+    preIntro,
+    intro,
+    body,
+    conclusion
+  };
 }
